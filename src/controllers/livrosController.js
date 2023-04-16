@@ -5,10 +5,9 @@ class LivroController {
 
   static listarLivros = async (req, res, next) => {
     try {
-      const livrosResultado = await livros.find()
-        .populate("autor") //Irá popular a entidade autor completa (que estiver vinculado ao livro )
-        .exec();
-      res.status(200).json(livrosResultado);
+      const buscaLivros = livros.find();
+      req.resultado = buscaLivros;
+      next();
     } catch (erro) {
       next(erro);
     }
@@ -18,9 +17,9 @@ class LivroController {
     try {
       const id = req.params.id;
       const livroResultado = await livros
-        .findById(id)
-        .populate("autor", "nome") //Irá popular apenas o nome do autor
-        .exec();
+        .findById(id, {}, { autopopulate: false}) //Retirando a ação do plugin autopopulate do objeto nessa requisição
+        .populate("autor"); //Irá popular apenas o nome do autor
+        // .exec(); //Se tornou opcional essa função com async/await
 
       if(livroResultado !== null){
         res.status(200).send(livroResultado);
@@ -36,10 +35,12 @@ class LivroController {
     try {
       const busca = await processaBusca(req.query);
       if (busca !== null) {
-        const livrosResultado = await livros
-          .find(busca)
-          .populate("autor");
-        res.status(200).send(livrosResultado);
+        const livrosResultado = livros
+          .find(busca);
+          // .populate("autor");
+
+        req.resultado = livrosResultado;  
+        next();
       } else {
         res.status(200).send([]);
       }
