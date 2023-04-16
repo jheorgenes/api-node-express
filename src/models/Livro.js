@@ -10,9 +10,28 @@ const livroSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,ref: "autores", required: [true, "O(a) autor(a) é obrigatório"]
     }, 
     editora: {
-      type: String, required: [true, "A editora é obrigatória"]
+      type: String, required: [true, "A editora é obrigatória"],
+      enum: {
+        values: ["Casa do código", "Alura"],
+        message: "A editora '{VALUE}' não é um valor permitido"
+      }
     },
-    numeroPaginas: {type: Number}
+    /**
+     * Validação personalizada
+     * A propriedade passada para o campo sempre se chama validate, seja ela uma função ou um objeto. 
+     * Nesse caso, como é um objeto, ele deve ter uma função chamada validator, que recebe como parâmetro o valor fornecido para o campo 'numeroPaginas' e retorna true ou false para validar ou não o campo. 
+     * Essa sintaxe de objeto também permite que a propriedade message seja passada para personalizar a mensagem de erro do campo.
+     */
+    numeroPaginas: {
+      type: Number,
+      validate: {
+        validator: (valor) => valor >= 10 && valor <= 5000,
+        message: "O número de páginas deve estar entre 10 e 5000. Valor fornecido: {VALUE}"
+      }
+      // validação simples de min e max de números
+      // min: [10, "O número de páginas deve estar entre 10 e 5000. Valor fornecido: {VALUE}"],
+      // max: [5000, "O número de páginas deve estar entre 10 e 5000. Valor fornecido: {VALUE}"]
+    }
   }
 );
 

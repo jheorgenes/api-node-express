@@ -1,5 +1,5 @@
 import NaoEncontrado from "../erros/NaoEncontrado.js";
-import livros from "../models/Livro.js";
+import { autores, livros } from "../models/index.js";
 
 class LivroController {
 
@@ -17,7 +17,8 @@ class LivroController {
   static listarLivroPorId = async (req, res, next) => {
     try {
       const id = req.params.id;
-      const livroResultado = await livros.findById(id)
+      const livroResultado = await livros
+        .findById(id)
         .populate("autor", "nome") //Irá popular apenas o nome do autor
         .exec();
 
@@ -31,13 +32,17 @@ class LivroController {
     }
   };
 
-  static listarLivroPorEditora = async (req, res, next) => {
+  static listarLivroPorFiltro = async (req, res, next) => {
     try {
-      //Pegando do parâmetro da url definido como editora
-      const editora = req.query.editora;
-      //Buscando = parâmetro ({'nome de associação do parametro da query': valor do parametro da query}, {opcoes de query});
-      const livrosResultado = await livros.find({"editora": editora});
-      res.status(200).send(livrosResultado);
+      const busca = await processaBusca(req.query);
+      if (busca !== null) {
+        const livrosResultado = await livros
+          .find(busca)
+          .populate("autor");
+        res.status(200).send(livrosResultado);
+      } else {
+        res.status(200).send([]);
+      }
     } catch (erro) {
       next(erro);
     }
@@ -84,6 +89,35 @@ class LivroController {
     }
   };
   
+}
+
+/**
+ *  Function interna para extração de parâmetros passados na URL e retornar o tipo de busca a ser realizado  
+ */
+async function processaBusca(parametros) {
+  const { editora, titulo, minPaginas, maxPaginas, nomeAutor } = parametros;
+  let busca = {}; //Recebendo um objeto vazio
+  if (editora) busca.editora = editora; //Cria uma propriedade editora para receber o valor da variável
+  if (titulo) busca.titulo = { $regex: titulo, $options: "i" }; //Não diferencia minúsculas de maiúsculas
+  /** 
+   * Para efetuar a busca de min e max páginas corretamente
+   * Precisa reinicializar a instância 'busca' (sendo um Object vazio ou não) para criar a propriedade 'numeroPaginas' (recebendo outro Object vazio)
+   * Assim será possível adicionar à propriedade o valor que será filtrado.
+   */
+  if (minPaginas || maxPaginas) busca.numeroPaginas = {};
+  // $gte = Greater than or Equal = Corresponde a valores maiores ou iguais a um valor especificado.
+  if (minPaginas) busca.numeroPaginas.$gte = minPaginas;
+  // $lte = Less than or Equal = Corresponde a valores menores ou iguais a um valor especificado.
+  if (maxPaginas) busca.numeroPaginas.$lte = maxPaginas;
+
+  if (nomeAutor){
+    const autor = await autores.findOne({ nome: nomeAutor });
+    if (autor !== null) 
+      busca.autor = autor._id;
+    else 
+      busca = null;
+  }
+  return busca;
 }
 
 export default LivroController;
